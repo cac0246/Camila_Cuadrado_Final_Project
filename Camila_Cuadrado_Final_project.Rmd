@@ -2,11 +2,12 @@
 title: "Final_Project_Spring2025"
 author: "Camila Cuadrado"
 date: "2025-04-24"
-output: 
-        pdf_document:
-        html_document:
-        md_document:
-          variant: gfm
+output:
+  word_document: default
+  html_document: null
+  md_document:
+    variant: gfm
+  pdf_document: null
 ---
 
 ```{r}
