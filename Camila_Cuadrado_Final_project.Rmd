@@ -94,7 +94,7 @@ figure1 <- ggplot(effect_counts_df, aes(x = Effect, y = Count, fill = Effect)) +
   xlab("") +                                # Label for x-axis
   ylab("Count") +                                      # Label for y-axis
   theme_classic() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Tilt x-axis labels for readability
+  theme(axis.text.x = element_blank()) +  # Tilt x-axis labels for readability
   annotate("text",                                     # Add annotation text
            x = Inf, y = Inf,                           # Position at top-right of plot
            label = paste0("Chi-sq p = ", signif(p_val, 3)),  # Text with formatted p-value
@@ -137,7 +137,7 @@ gene_summary
 # Plot the summarized gene counts
 ggplot(gene_summary, aes(x = Gene_clean, y = Total, fill = Gene_clean)) +
   geom_bar(stat = "identity") +  # Use actual values in 'Total' column
-  theme_minimal() +              # Clean and simple theme
+  theme_classic() +              # Clean and simple theme
   xlab("Gene Type") +            # Label for x-axis
   ylab("Total Count") +          # Label for y-axis
   ggtitle("Total Variant Counts by Gene Type") +  # Plot title
@@ -170,7 +170,7 @@ impact_by_gene
 
 ggplot(impact_by_gene, aes(x = Gene, y = n, fill = Impact)) +
   geom_bar(stat = "identity") +
-  facet_wrap(~Impact, scales = "free_y") +
+  facet_wrap(~Impact, scales = "free") +
   theme_classic() +
   xlab("Gene") +
   ylab("Count") +
