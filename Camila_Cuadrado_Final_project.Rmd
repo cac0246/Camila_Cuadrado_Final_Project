@@ -2,7 +2,11 @@
 title: "Final_Project_Spring2025"
 author: "Camila Cuadrado"
 date: "2025-04-24"
-output: html_document
+output: 
+        html_document:
+        pdf_document:
+        md_document:
+          variant: gfm
 ---
 
 ```{r}
@@ -89,7 +93,7 @@ p_val <- chi_result$p.value
 
 # Create the bar plot using ggplot
 figure1 <- ggplot(effect_counts_df, aes(x = Effect, y = Count, fill = Effect)) +
-  geom_bar(stat = "identity") +                        # Create bars using actual count values
+  geom_bar(stat = "identity", width = 0.7) +                        # Create bars using actual count values
   theme_minimal() +                                    # Apply a clean minimal theme
   xlab("") +                                # Label for x-axis
   ylab("Count") +                                      # Label for y-axis
@@ -100,7 +104,6 @@ figure1 <- ggplot(effect_counts_df, aes(x = Effect, y = Count, fill = Effect)) +
            label = paste0("Chi-sq p = ", signif(p_val, 3)),  # Text with formatted p-value
            hjust = 1.1, vjust = 1.5,                   # Adjust text position
            size = 3, fontface = "italic")              # Text styling (size and italics)
-
 # Display the plot
 figure1
 ```
@@ -111,31 +114,33 @@ library(dplyr)
 # Getting data of gene by group
 gene_summary <- ann_df %>%
   group_by(Gene) %>%
-  summarise(Total = sum(Count))
+  summarise(Count = sum(Count))
 gene_summary
 ```
+```{r}
+library(stringr)
+```
+
 
 ```{r}
-library(dplyr)
-library(stringr)
-
 # Clean up and summarize the gene types
-gene_summary <- gene %>%
+gene_summary_clean <- gene_summary %>%
   mutate(Gene_clean = case_when(                 # Create a new simplified gene label column
     str_detect(Gene, "M") ~ "M",                 # Label "M" if "M" appears in the original string
     str_detect(Gene, "F") ~ "F",                 # Label "F" if "F" appears
+    str_detect(Gene, "HN") ~ "HN",                 # Label "F" if "F" appears
     str_detect(Gene, "P") ~ "P",                 # Label "P" if "P" appears
     str_detect(Gene, "NP") ~ "NP",               # Label "NP" if "NP" appears
     TRUE ~ Gene                                  # Otherwise, keep the original label
   )) %>%
   group_by(Gene_clean) %>%                       # Group by the new gene label
   summarise(Total = sum(Count))                  # Sum all counts per gene group
-gene_summary
+gene_summary_clean
 ```
 
 ```{r}
 # Plot the summarized gene counts
-ggplot(gene_summary, aes(x = Gene_clean, y = Total, fill = Gene_clean)) +
+ggplot(gene_summary_clean, aes(x = Gene_clean, y = Total, fill = Gene_clean)) +
   geom_bar(stat = "identity") +  # Use actual values in 'Total' column
   theme_classic() +              # Clean and simple theme
   xlab("Gene Type") +            # Label for x-axis
