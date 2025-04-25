@@ -1,0 +1,180 @@
+---
+title: "Final_Project_Spring2025"
+author: "Camila Cuadrado"
+date: "2025-04-24"
+output: html_document
+---
+
+```{r}
+#Load Library
+library(tidyverse)
+library(ggplot2)
+library(vcfR)
+```
+
+
+```{r}
+#Load data
+vcf_data2 <- read.vcfR("Sample_2.vcf", verbose = TRUE)
+vcf_data2
+```
+
+
+```{r}
+# Get the "ANN" field (which contains variant annotations) from the VCF data
+annotations <- extract.info(vcf_data2, "ANN")  # Extracting the ANN field from INFO
+# For each variant, split the annotation string into separate pieces if there are multiple (they're separated by commas)
+ann_list <- strsplit(annotations, ",")
+# From each list of annotations, just take the first one (to keep things simple)
+# Then split that annotation into its parts using the "|" symbol, which separates the details
+# If there's no annotation, just create a list of NA (empty values) to fill the space
+first_ann <- lapply(ann_list, function(x) {
+  if (length(x) > 0) {
+    fields <- strsplit(x[1], "\\|")[[1]]  # Extract the first annotation for simplicity
+    fields
+  } else {
+    rep(NA, 17)  # Pad with NA for missing annotations
+  }
+})
+```
+
+
+```{r}
+# Find the maximum number of fields across all annotation entries
+# (Some annotations might have fewer fields than others)
+max_cols <- max(sapply(first_ann, length))
+
+# Make sure every annotation has the same number of fields
+# If any annotation has fewer fields, fill the rest with NA
+first_ann <- lapply(first_ann, function(x) {
+  length(x) <- max_cols  # Set the length to the max number of fields
+  x  # Return the padded annotation
+})
+```
+
+We don’t use data.frame(first_ann) because it would create a single-column data frame with list elements, instead of a proper multi-column structure where each annotation field is in its own column.
+
+```{r}
+#Assign column names according to the snpEff annotation schema, truncating if necessary.
+ann_df <- do.call(rbind, first_ann)
+colnames(ann_df) <- c("Allele", "Effect", "Impact", "Gene", "Gene_ID", 
+                      "Feature_Type", "Feature_ID", "Transcript_BioType", 
+                      "Rank", "HGVS.c", "HGVS.p", "cDNA.pos", "CDS.pos", 
+                      "AA.pos", "Distance", "ERRORS", "WARNINGS")[1:max_cols]
+```
+
+
+```{r}
+head(ann_df)
+```
+
+```{r}
+# Convert ann_df to a data frame
+ann_df <- as.data.frame(ann_df, stringsAsFactors = FALSE)
+# Count how many times each unique 'Effect' appears in the annotation dataframe
+effect_counts_df <- ann_df %>%
+  count(Effect, name = "Count")
+# Join the counts back to the original annotation dataframe
+# This adds a new 'Count' column to ann_df, matching by the 'Effect' value
+ann_df <- ann_df %>%
+  left_join(effect_counts_df, by = "Effect")
+```
+
+```{r}
+# Perform Chi-square test to see if variant effects are equally distributed
+chi_result <- chisq.test(effect_counts_df$Count)
+
+# Extract the p-value from the test result
+p_val <- chi_result$p.value
+
+# Create the bar plot using ggplot
+figure1 <- ggplot(effect_counts_df, aes(x = Effect, y = Count, fill = Effect)) +
+  geom_bar(stat = "identity") +                        # Create bars using actual count values
+  theme_minimal() +                                    # Apply a clean minimal theme
+  xlab("") +                                # Label for x-axis
+  ylab("Count") +                                      # Label for y-axis
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +  # Tilt x-axis labels for readability
+  annotate("text",                                     # Add annotation text
+           x = Inf, y = Inf,                           # Position at top-right of plot
+           label = paste0("Chi-sq p = ", signif(p_val, 3)),  # Text with formatted p-value
+           hjust = 1.1, vjust = 1.5,                   # Adjust text position
+           size = 3, fontface = "italic")              # Text styling (size and italics)
+
+# Display the plot
+figure1
+```
+
+```{r}
+library(dplyr)
+
+# Getting data of gene by group
+gene_summary <- ann_df %>%
+  group_by(Gene) %>%
+  summarise(Total = sum(Count))
+gene_summary
+```
+
+```{r}
+library(dplyr)
+library(stringr)
+
+# Clean up and summarize the gene types
+gene_summary <- gene %>%
+  mutate(Gene_clean = case_when(                 # Create a new simplified gene label column
+    str_detect(Gene, "M") ~ "M",                 # Label "M" if "M" appears in the original string
+    str_detect(Gene, "F") ~ "F",                 # Label "F" if "F" appears
+    str_detect(Gene, "P") ~ "P",                 # Label "P" if "P" appears
+    str_detect(Gene, "NP") ~ "NP",               # Label "NP" if "NP" appears
+    TRUE ~ Gene                                  # Otherwise, keep the original label
+  )) %>%
+  group_by(Gene_clean) %>%                       # Group by the new gene label
+  summarise(Total = sum(Count))                  # Sum all counts per gene group
+gene_summary
+```
+
+```{r}
+# Plot the summarized gene counts
+ggplot(gene_summary, aes(x = Gene_clean, y = Total, fill = Gene_clean)) +
+  geom_bar(stat = "identity") +  # Use actual values in 'Total' column
+  theme_minimal() +              # Clean and simple theme
+  xlab("Gene Type") +            # Label for x-axis
+  ylab("Total Count") +          # Label for y-axis
+  ggtitle("Total Variant Counts by Gene Type") +  # Plot title
+  theme(
+    legend.position = "none",                        # Hide legend (not needed)
+    panel.grid.major = element_blank(),             # Remove major grid lines
+    panel.grid.minor = element_blank(),             # Remove minor grid lines
+    axis.text.x = element_text(size = 12),          # Tweak x-axis text size
+    axis.text.y = element_text(size = 12),          # Tweak y-axis text size
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold")  # Centered title
+  )
+```
+
+```{r}
+#Selecting data for analysis by gene
+# Extract columns of interest from the annotation data frame
+gene_annotations <- ann_df %>% 
+  select(Gene, Effect, Impact) %>% 
+  filter(!is.na(Gene))  # Remove rows with missing gene names
+
+# View top gene mutations
+head(gene_annotations)
+
+```
+```{r}
+impact_by_gene <- gene_annotations %>%
+  count(Gene, Impact) %>%
+  group_by(Gene)
+impact_by_gene
+
+ggplot(impact_by_gene, aes(x = Gene, y = n, fill = Impact)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Impact, scales = "free_y") +
+  theme_classic() +
+  xlab("Gene") +
+  ylab("Count") +
+  ggtitle("Variant Impact per Gene") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
