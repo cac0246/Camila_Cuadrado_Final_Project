@@ -3,11 +3,13 @@
 This project is focused on analyzing and visualizing genetic variant data from VCF files using the vcfR, dplyr, ggplot2, and other supporting R packages. The goal is to extract functional annotations (using the ANN field from snpEff), summarize variant effects, and visualize their distribution by type and gene impact.
 
 **Project Structure**
+
 	•	Sample_1.vcf, Sample_2.vcf, …: Input VCF files containing annotated variant data.
 	•	R Markdown / .R scripts: Scripts for data extraction, transformation, statistical analysis, and visualization.
 	•	README.md: Overview of the pipeline, tools used, and how to run the analysis.
 
 **Required R Packages**
+
 install.packages(c("vcfR", "dplyr", "ggplot2", "stringr", "ggpubr"))
 
 **Workflow Overview**
@@ -39,13 +41,16 @@ annotations <- extract.info(vcf_data, "ANN")
 	•	Visualize total variants per gene or category.
 
 **Example Plot**
+
 ggplot(effect_counts_df, aes(x = Effect, y = Count, fill = Effect)) +
   geom_bar(stat = "identity") +
   theme_classic() +
   xlab("Variant Effect") +
   ylab("Count") +
   ggtitle("Distribution of Variant Effects")
+  
 **Notes**
+
 	•	The script processes only the first annotation for each variant (ANN[1]) for simplicity.
 	•	Designed for snpEff-compatible VCF files.
 	•	You can easily extend this pipeline for additional VCFs by wrapping the script into a loop or function.
